@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.8;
+pragma solidity ^0.8.17;
 
 import "./PriceConverter.sol";
+import "./Fund.sol";
+import "./CloseFactory.sol";
 
 error FundMe__NotOwner();
 error FundMe__NotEnoughFunds();
@@ -12,22 +14,25 @@ error FundMe__TransferFailed();
  * @notice This contract is for creating a sample funding contract
  * @dev This implements price feeds as our library
  */
-contract FundMe {
+contract FundMeFactory is CloneFactory {
     using PriceConverter for uint256;
-    uint256 public constant MIN_USD = 50;
+    uint256 public constant MIN_USD = 10;
     address[] public s_funders;
     address private immutable i_owner;
     AggregatorV3Interface public s_priceFeed;
     mapping(address => uint256) public s_addressToAmountFunded;
+    address masterContract;
+    Fund[] funds;
 
     modifier only_owner() {
         if (msg.sender != i_owner) revert FundMe__NotOwner();
         _;
     }
 
-    constructor(address s_priceFeedAddress) {
+    constructor(address s_priceFeedAddress, address _masterContract) {
         i_owner = msg.sender;
         s_priceFeed = AggregatorV3Interface(s_priceFeedAddress);
+        masterContract = _masterContract;
     }
 
     receive() external payable {
@@ -36,6 +41,12 @@ contract FundMe {
 
     fallback() external payable {
         fund();
+    }
+
+    function createFund() external {
+        Fund fund = Fund(createClone(masterContract));
+        fund.getData();
+        funds.push(fund);
     }
 
     function fund() public payable {
@@ -68,11 +79,9 @@ contract FundMe {
         return s_funders[index];
     }
 
-    function getAddressToAmountFunded(address funder)
-        public
-        view
-        returns (uint256)
-    {
+    function getAddressToAmountFunded(
+        address funder
+    ) public view returns (uint256) {
         return s_addressToAmountFunded[funder];
     }
 
