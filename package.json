@@ -1,6 +1,6 @@
 {
-  "name": "hardhat-fund-me",
-  "author": "@vbazhutin",
+  "name": "fund-me",
+  "author": "@voyotex",
   "version": "1.0.0",
   "devDependencies": {
     "@chainlink/contracts": "^0.4.1",

@@ -1,91 +1,120 @@
 // SPDX-License-Identifier: MIT
+
 pragma solidity ^0.8.17;
 
-import "./PriceConverter.sol";
-import "./Fund.sol";
-import "./CloseFactory.sol";
+error Fund__NoFundsToWithdraw();
+error Fund__NotFundOwner();
+error Fund__FundsTransferFailed(
+    bool result,
+    uint256 balance,
+    uint256 transferAmount
+);
+error Fund__FeeTransferFailed(
+    bool result,
+    uint256 balance,
+    uint256 transferAmount
+);
+error Fund__FundingExpired();
 
-error FundMe__NotOwner();
-error FundMe__NotEnoughFunds();
-error FundMe__TransferFailed();
+contract Fund {
+    uint256 public index; //32
+    uint256 public fundDuration; //32
+    uint256 public startTime; //32
+    uint256 public targetFunding; //64
+    uint256 public currentFunding; //64
+    address public fundOwner;
+    address public fundManager;
+    string public fundName;
 
-/**@title A sample Funding Contract
- * @author @vbazhutin
- * @notice This contract is for creating a sample funding contract
- * @dev This implements price feeds as our library
- */
-contract FundMeFactory is CloneFactory {
-    using PriceConverter for uint256;
-    uint256 public constant MIN_USD = 10;
-    address[] public s_funders;
-    address private immutable i_owner;
-    AggregatorV3Interface public s_priceFeed;
-    mapping(address => uint256) public s_addressToAmountFunded;
-    address masterContract;
-    Fund[] funds;
+    // mapping of funders and amount they put into the fund
+    mapping(address => uint256) public funderToAmount;
+    address[] public funders;
 
-    modifier only_owner() {
-        if (msg.sender != i_owner) revert FundMe__NotOwner();
-        _;
-    }
-
-    constructor(address s_priceFeedAddress, address _masterContract) {
-        i_owner = msg.sender;
-        s_priceFeed = AggregatorV3Interface(s_priceFeedAddress);
-        masterContract = _masterContract;
-    }
-
-    receive() external payable {
-        fund();
-    }
-
-    fallback() external payable {
-        fund();
-    }
-
-    function createFund() external {
-        Fund fund = Fund(createClone(masterContract));
-        fund.getData();
-        funds.push(fund);
+    function initialize(
+        uint256 _index,
+        string memory _fundName,
+        address _fundOwner,
+        uint256 _targetFunding,
+        uint256 _fundDuration,
+        address _fundManager
+    ) public {
+        currentFunding = 0;
+        startTime = block.timestamp;
+        fundDuration = _fundDuration;
+        index = _index;
+        targetFunding = _targetFunding;
+        fundName = _fundName;
+        fundOwner = _fundOwner;
+        fundManager = _fundManager;
     }
 
     function fund() public payable {
-        if (msg.value.getConvertionRate(s_priceFeed) <= MIN_USD)
-            revert FundMe__NotEnoughFunds();
-        s_funders.push(msg.sender);
-        s_addressToAmountFunded[msg.sender] = msg.value;
-    }
-
-    function withdraw() public only_owner {
-        address[] memory local_funders = s_funders;
-        for (uint256 i = 0; i < local_funders.length; i++) {
-            address funder = local_funders[i];
-            s_addressToAmountFunded[funder] = 0;
+        if (block.timestamp > startTime + fundDuration) {
+            revert Fund__FundingExpired();
         }
-        s_funders = new address[](0);
-
-        (bool callResult, ) = payable(msg.sender).call{
-            value: address(this).balance
-        }("");
-        if (!callResult) revert FundMe__TransferFailed();
+        funderToAmount[msg.sender] += msg.value;
+        funders.push(msg.sender);
+        currentFunding += msg.value;
     }
 
-    // add getters for contract owner, priceFeed and funder[index], amount funded[funder]
-    function getOwner() public view returns (address) {
-        return i_owner;
+    // function getCurrentFunding() public view returns (uint256) {
+    //     return currentFunding;
+    // }
+
+    // function getFundOwner() public view returns (address) {
+    //     return fundOwner;
+    // }
+
+    // function getTargetFunding() public view returns (uint256) {
+    //     return targetFunding;
+    // }
+
+    // function getFundDuration() public view returns (uint256) {
+    //     return fundDuration;
+    // }
+
+    // function getStartTime() public view returns (uint256) {
+    //     return startTime;
+    // }
+
+    function getFundData()
+        public
+        view
+        returns (uint256, string memory, address, uint256, uint256, uint256)
+    {
+        return (
+            index,
+            fundName,
+            fundOwner,
+            currentFunding,
+            targetFunding,
+            fundDuration
+        );
     }
 
-    function getFunder(uint256 index) public view returns (address) {
-        return s_funders[index];
-    }
+    function withdrawFunds() public payable {
+        uint256 balance = address(this).balance;
+        if (balance == 0) {
+            revert Fund__NoFundsToWithdraw();
+        }
+        if (msg.sender != fundOwner) {
+            revert Fund__NotFundOwner();
+        }
 
-    function getAddressToAmountFunded(
-        address funder
-    ) public view returns (uint256) {
-        return s_addressToAmountFunded[funder];
-    }
+        //taking 1% of all funds as service fee, transfer to contract factory
+        uint256 fee = (balance * 1) / 100;
+        (bool feeTransferRes, ) = payable(fundManager).call{value: fee}("");
+        if (!feeTransferRes)
+            revert Fund__FeeTransferFailed(feeTransferRes, balance, fee);
 
-    function getPriceFeed() public view returns (AggregatorV3Interface) {
-        return s_priceFeed;
+        (bool fundTransferRes, ) = payable(fundOwner).call{value: balance}("");
+
+        if (!fundTransferRes)
+            revert Fund__FundsTransferFailed(fundTransferRes, balance, balance);
+
+        // (bool callResult, ) = payable(msg.sender).call{
+        //     value: address(this).balance
+        // }("");
+        // if (!callResult) revert FundMe__TransferFailed();
     }
 }

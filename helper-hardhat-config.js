@@ -7,10 +7,6 @@ const networkConfig = {
         name: "polygon",
         ethUsdPriceFeed: "0xF9680D99D6C9589e2a93a78A04A279e509205945",
     },
-    42: {
-        name: "kovan",
-        ethUsdPriceFeed: "0x9326BFA02ADD2366b30bacB125260Af641031331",
-    },
 };
 
 const developmentChains = ["hardhat", "localhost"];
