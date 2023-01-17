@@ -1,120 +1,61 @@
 // SPDX-License-Identifier: MIT
 
+/**@title A sample Funding Contract
+ * @author @voyotex
+ * @notice This contract is for creating a sample funding contract
+ * @dev This implements price feeds as our library
+ */
 pragma solidity ^0.8.17;
 
-error Fund__NoFundsToWithdraw();
-error Fund__NotFundOwner();
-error Fund__FundsTransferFailed(
-    bool result,
-    uint256 balance,
-    uint256 transferAmount
-);
-error Fund__FeeTransferFailed(
-    bool result,
-    uint256 balance,
-    uint256 transferAmount
-);
-error Fund__FundingExpired();
+error FundMe__NotOwner();
+error FundMe__NotEnoughFunds();
+error FundMe__TransferFailed();
 
-contract Fund {
-    uint256 public index; //32
-    uint256 public fundDuration; //32
-    uint256 public startTime; //32
-    uint256 public targetFunding; //64
-    uint256 public currentFunding; //64
-    address public fundOwner;
-    address public fundManager;
-    string public fundName;
+contract FundMeFactory is CloneFactory {
+    uint256 private fundsIndexCounter;
+    uint256 public immutable i_minFundUSD;
+    address private immutable i_owner;
+    address[] public funds;
+    address masterContract;
 
-    // mapping of funders and amount they put into the fund
-    mapping(address => uint256) public funderToAmount;
-    address[] public funders;
+    constructor(address _masterContract) {
+        masterContract = _masterContract;
+        fundsIndexCounter = 0;
+        i_minFundUSD = 10;
+        i_owner = msg.sender;
+    }
 
-    function initialize(
-        uint256 _index,
+    receive() external payable {}
+
+    fallback() external payable {}
+
+    function createFund(
         string memory _fundName,
-        address _fundOwner,
-        uint256 _targetFunding,
         uint256 _fundDuration,
-        address _fundManager
-    ) public {
-        currentFunding = 0;
-        startTime = block.timestamp;
-        fundDuration = _fundDuration;
-        index = _index;
-        targetFunding = _targetFunding;
-        fundName = _fundName;
-        fundOwner = _fundOwner;
-        fundManager = _fundManager;
-    }
-
-    function fund() public payable {
-        if (block.timestamp > startTime + fundDuration) {
-            revert Fund__FundingExpired();
-        }
-        funderToAmount[msg.sender] += msg.value;
-        funders.push(msg.sender);
-        currentFunding += msg.value;
-    }
-
-    // function getCurrentFunding() public view returns (uint256) {
-    //     return currentFunding;
-    // }
-
-    // function getFundOwner() public view returns (address) {
-    //     return fundOwner;
-    // }
-
-    // function getTargetFunding() public view returns (uint256) {
-    //     return targetFunding;
-    // }
-
-    // function getFundDuration() public view returns (uint256) {
-    //     return fundDuration;
-    // }
-
-    // function getStartTime() public view returns (uint256) {
-    //     return startTime;
-    // }
-
-    function getFundData()
-        public
-        view
-        returns (uint256, string memory, address, uint256, uint256, uint256)
-    {
-        return (
-            index,
-            fundName,
-            fundOwner,
-            currentFunding,
-            targetFunding,
-            fundDuration
+        uint256 _targetFunding
+    ) external returns (address fund) {
+        Fund newFund = Fund(createClone(masterContract));
+        newFund.initialize(
+            fundsIndexCounter,
+            _fundName,
+            msg.sender,
+            _targetFunding,
+            _fundDuration,
+            address(this)
         );
+        // Fund newFund = new Fund(fundsIndexCounter, _fundName, msg.sender, _targetFunding, _fundDuration, address(this));
+        fund = address(newFund);
+        funds.push(address(newFund));
+        fundsIndexCounter++;
     }
 
-    function withdrawFunds() public payable {
-        uint256 balance = address(this).balance;
-        if (balance == 0) {
-            revert Fund__NoFundsToWithdraw();
+    function withdraw() public payable {
+        if (msg.sender != i_owner) {
+            revert FundMe__NotOwner();
         }
-        if (msg.sender != fundOwner) {
-            revert Fund__NotFundOwner();
-        }
-
-        //taking 1% of all funds as service fee, transfer to contract factory
-        uint256 fee = (balance * 1) / 100;
-        (bool feeTransferRes, ) = payable(fundManager).call{value: fee}("");
-        if (!feeTransferRes)
-            revert Fund__FeeTransferFailed(feeTransferRes, balance, fee);
-
-        (bool fundTransferRes, ) = payable(fundOwner).call{value: balance}("");
-
-        if (!fundTransferRes)
-            revert Fund__FundsTransferFailed(fundTransferRes, balance, balance);
-
-        // (bool callResult, ) = payable(msg.sender).call{
-        //     value: address(this).balance
-        // }("");
-        // if (!callResult) revert FundMe__TransferFailed();
+        (bool callResult, ) = payable(msg.sender).call{
+            value: address(this).balance
+        }("");
+        if (!callResult) revert FundMe__TransferFailed();
     }
 }
