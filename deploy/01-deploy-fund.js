@@ -7,7 +7,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     const chainId = network.config.chainId
 
     const args = []
-    const fundMe = await deploy("Fund", {
+    const fund = await deploy("Fund", {
         from: deployer,
         args: args,
         log: true,
@@ -17,4 +17,4 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     log("------------------------------------------------------")
 }
 
-module.exports.tags = ["all", "fund"]
+module.exports.tags = ["all", "Fund"]
