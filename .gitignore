@@ -8,3 +8,4 @@ deployments
 #Hardhat files
 cache
 artifacts
+gas*.txt
