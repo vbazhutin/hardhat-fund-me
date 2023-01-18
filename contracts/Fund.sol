@@ -1,3 +1,15 @@
+// SPDX-License-Identifier: MIT
+
+pragma solidity ^0.8.17;
+
+error Fund__NoFundsToWithdraw();
+error Fund__NotFundOwner();
+error Fund__FundsTransferFailed();
+error Fund__FeeTransferFailed();
+error Fund__FundingExpired();
+error Fund__FundingInProcess();
+error Fund__NotActive();
+
 contract Fund {
     uint256 public index; //32
     uint256 public fundDuration; //32

@@ -7,6 +7,9 @@
  */
 pragma solidity ^0.8.17;
 
+import "./CloseFactory.sol";
+import "./Fund.sol";
+
 error FundMe__NotOwner();
 error FundMe__NotEnoughFunds();
 error FundMe__TransferFailed();
@@ -16,7 +19,7 @@ contract FundMeFactory is CloneFactory {
     uint256 public immutable i_minFundUSD;
     address private immutable i_owner;
     address[] public funds;
-    address masterContract;
+    address public masterContract;
 
     constructor(address _masterContract) {
         masterContract = _masterContract;
@@ -61,5 +64,9 @@ contract FundMeFactory is CloneFactory {
             value: address(this).balance
         }("");
         if (!callResult) revert FundMe__TransferFailed();
+    }
+
+    function getMasterContract() public view returns (address) {
+        return masterContract;
     }
 }
