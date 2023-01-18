@@ -15,9 +15,9 @@ error FundMe__NotEnoughFunds();
 error FundMe__TransferFailed();
 
 contract FundMeFactory is CloneFactory {
-    uint256 private fundsIndexCounter;
+    uint256 public fundsIndexCounter;
     uint256 public immutable i_minFundUSD;
-    address private immutable i_owner;
+    address public immutable i_owner;
     address[] public funds;
     address public masterContract;
 
@@ -46,7 +46,6 @@ contract FundMeFactory is CloneFactory {
             _fundDuration,
             address(this)
         );
-        // Fund newFund = new Fund(fundsIndexCounter, _fundName, msg.sender, _targetFunding, _fundDuration, address(this));
         fund = address(newFund);
         funds.push(address(newFund));
         fundsIndexCounter++;
@@ -68,5 +67,9 @@ contract FundMeFactory is CloneFactory {
 
     function getMasterContract() public view returns (address) {
         return masterContract;
+    }
+
+    function getFunds() public view returns (address[] memory) {
+        return funds;
     }
 }
