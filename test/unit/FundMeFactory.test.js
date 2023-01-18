@@ -1,6 +1,7 @@
 const { assert, expect } = require("chai")
 const { network, deployments, ethers, getNamedAccounts } = require("hardhat")
 const { developmentChains } = require("../../helper-hardhat-config")
+const fs = require("fs")
 
 describe("FundMeFactory", () => {
     let FundMeFactory, Fund, deployer
@@ -74,20 +75,26 @@ describe("FundMeFactory", () => {
 
     describe("createFund()", function () {
         it("should create a new fund contract", async () => {
+            const FundABI = JSON.parse(
+                fs.readFileSync("./deployments/localhost/Fund.json", "utf-8")
+            ).abi
             const fundName = "Fund 1"
             const fundDuration = 100
             const targetFunding = ethers.utils.parseEther("10")
             const initialFundsLength = (await FundMeFactory.getFunds()).length
-            const fund = await FundMeFactory.createFund(
+            const tx = await FundMeFactory.createFund(
                 fundName,
                 fundDuration,
                 targetFunding
             )
-            const newFund = new ethers.Contract(
-                fund,
-                Fund.abi,
-                FundMeFactory.address
-            )
+            console.log(tx)
+            const fund = await tx.wait(1)
+            console.log(fund)
+            // const newFund = new ethers.Contract(
+            //     fund,
+            //     Fund.abi,
+            //     FundMeFactory.address
+            // )
             console.log(newFund)
             const finalFundsLength = (await FundMeFactory.getFunds()).length
             expect(finalFundsLength).to.equal(initialFundsLength + 1)
