@@ -50,8 +50,12 @@ contract FundMeFactory is CloneFactory {
     }
 
     function withdraw() public payable {
+        uint256 balance = address(this).balance;
         if (msg.sender != i_owner) {
             revert FundMe__NotOwner();
+        }
+        if (balance == 0) {
+            revert FundMe__NotEnoughFunds();
         }
         (bool callResult, ) = payable(msg.sender).call{
             value: address(this).balance
