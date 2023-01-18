@@ -1,13 +1,3 @@
-// SPDX-License-Identifier: MIT
-
-pragma solidity ^0.8.17;
-
-error Fund__NoFundsToWithdraw();
-error Fund__NotFundOwner();
-error Fund__FundsTransferFailed();
-error Fund__FeeTransferFailed();
-error Fund__FundingExpired();
-
 contract Fund {
     uint256 public index; //32
     uint256 public fundDuration; //32
@@ -49,30 +39,18 @@ contract Fund {
         currentFunding += msg.value;
     }
 
-    // function getCurrentFunding() public view returns (uint256) {
-    //     return currentFunding;
-    // }
-
-    // function getFundOwner() public view returns (address) {
-    //     return fundOwner;
-    // }
-
-    // function getTargetFunding() public view returns (uint256) {
-    //     return targetFunding;
-    // }
-
-    // function getFundDuration() public view returns (uint256) {
-    //     return fundDuration;
-    // }
-
-    // function getStartTime() public view returns (uint256) {
-    //     return startTime;
-    // }
-
     function getFundData()
         public
         view
-        returns (uint256, string memory, address, uint256, uint256, uint256)
+        returns (
+            uint256,
+            string memory,
+            address,
+            uint256,
+            uint256,
+            uint256,
+            uint256
+        )
     {
         return (
             index,
@@ -80,11 +58,16 @@ contract Fund {
             fundOwner,
             currentFunding,
             targetFunding,
+            startTime,
             fundDuration
         );
     }
 
     function withdrawFunds() public payable {
+        if (block.timestamp < startTime + fundDuration) {
+            revert Fund__FundingInProcess();
+        }
+
         uint256 balance = address(this).balance;
         if (balance == 0) {
             revert Fund__NoFundsToWithdraw();
