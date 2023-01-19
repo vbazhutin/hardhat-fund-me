@@ -27,6 +27,7 @@ npx solhint 'contracts/**/*.sol' --fix
 
 ## TODO
 
-- User is paying for contract deployment. When used withdraws the ETH from his fund then we take 1% of all the funds user gathered. No other charges are involved
-- Implement on the fly Uniswap: Any Coin -> Eth (if its even possible)
-- Upgradable Fund factory thru proxy
+-   User is paying for contract deployment. When used withdraws the ETH from his fund then we take 1% of all the funds user gathered. No other charges are involved
+-   Implement on the fly Uniswap: Any Coin -> Eth (if its even possible)
+-   Upgradable Fund factory thru proxy
+-   https://forum.openzeppelin.com/t/how-to-correctly-test-the-initialisation-of-a-clone-contract-on-hardhat-eip-1167/31774
