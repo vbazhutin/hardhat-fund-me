@@ -7,14 +7,14 @@
  */
 pragma solidity ^0.8.17;
 
-import "./CloseFactory.sol";
+import "./Clones.sol";
 import "./Fund.sol";
 
 error FundMe__NotOwner();
 error FundMe__NotEnoughFunds();
 error FundMe__TransferFailed();
 
-contract FundMeFactory is CloneFactory {
+contract FundMeFactory {
     uint256 public fundsIndexCounter;
     uint256 public immutable i_minFundUSD;
     address public immutable i_owner;
@@ -28,6 +28,8 @@ contract FundMeFactory is CloneFactory {
         i_owner = msg.sender;
     }
 
+    event FundCreated(uint256 index, address fundAddress);
+
     receive() external payable {}
 
     fallback() external payable {}
@@ -37,8 +39,8 @@ contract FundMeFactory is CloneFactory {
         uint256 _fundDuration,
         uint256 _targetFunding
     ) external returns (address fund) {
-        Fund newFund = Fund(createClone(masterContract));
-        newFund.initialize(
+        fund = Clones.clone(masterContract);
+        fund.initialize(
             fundsIndexCounter,
             _fundName,
             msg.sender,
@@ -46,8 +48,8 @@ contract FundMeFactory is CloneFactory {
             _fundDuration,
             address(this)
         );
-        fund = address(newFund);
-        funds.push(address(newFund));
+        funds.push(address(fund));
+        emit FundCreated(fundsIndexCounter, fund);
         fundsIndexCounter++;
     }
 
