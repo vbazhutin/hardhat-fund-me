@@ -1,14 +1,14 @@
-require("dotenv").config();
-require("@nomiclabs/hardhat-etherscan");
-require("@nomiclabs/hardhat-waffle");
-require("hardhat-gas-reporter");
-require("solidity-coverage");
-require("hardhat-deploy");
+require("dotenv").config()
+require("@nomiclabs/hardhat-etherscan")
+require("@nomiclabs/hardhat-waffle")
+require("hardhat-gas-reporter")
+require("solidity-coverage")
+require("hardhat-deploy")
 
-const RINKEBY_RPC_URL = process.env.RINKEBY_RPC_URL;
-const PRIVATE_KEY = process.env.PRIVATE_KEY;
-const ETHERSCAN_API_KEY = process.env.ETHERSCAN_API_KEY;
-const COINMARKETCAP_API_KEY = process.env.COINMARKETCAP_API_KEY;
+const RINKEBY_RPC_URL = process.env.RINKEBY_RPC_URL
+const PRIVATE_KEY = process.env.PRIVATE_KEY
+const ETHERSCAN_API_KEY = process.env.ETHERSCAN_API_KEY
+const COINMARKETCAP_API_KEY = process.env.COINMARKETCAP_API_KEY
 /**
  * @type import('hardhat/config').HardhatUserConfig
  */
@@ -17,6 +17,8 @@ module.exports = {
     networks: {
         hardhat: {
             chainId: 31337,
+            gas: "auto",
+            gasPrice: "auto",
         },
         rinkeby: {
             url: RINKEBY_RPC_URL || "",
@@ -44,4 +46,4 @@ module.exports = {
             1: 0, // similarly on mainnet it will take the first account as deployer. Note though that depending on how hardhat network are configured, the account 0 on one network can be different than on another
         },
     },
-};
+}

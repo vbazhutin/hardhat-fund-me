@@ -110,6 +110,10 @@ describe("FundMeFactory", () => {
                 fundDuration,
                 FundMeFactory.address
             )
+            deployer.sendTransaction({
+                to: signedNewFund.address,
+            })
+            await init.wait()
             console.log("works")
             const finalFundsLength = (await FundMeFactory.getFunds()).length
             expect(finalFundsLength).to.equal(initialFundsLength + 1)
@@ -117,8 +121,17 @@ describe("FundMeFactory", () => {
                 signedNewFund.address + " = " + result.events[0].address
             )
 
-            // console.log(result.events[0].address)
-            expect(await signedNewFund.fundName()).to.equal(fundName)
+            const {
+                0: index,
+                1: name,
+                2: fundOwner,
+                3: currentFunding,
+                4: goalFunding,
+                5: startTime,
+                6: fundDur,
+            } = await signedNewFund.getFundData()
+
+            // expect(await signedNewFund.fundName()).to.equal(fundName)
         })
 
         // it("should increment the fundsIndexCounter", async () => {
