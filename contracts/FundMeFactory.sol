@@ -40,7 +40,7 @@ contract FundMeFactory {
         uint256 _targetFunding
     ) external returns (address fund) {
         fund = Clones.clone(masterContract);
-        fund.initialize(
+        Fund(fund).initialize(
             fundsIndexCounter,
             _fundName,
             msg.sender,
