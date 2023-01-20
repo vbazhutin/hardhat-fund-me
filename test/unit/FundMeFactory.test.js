@@ -5,7 +5,7 @@ const fs = require("fs")
 const { resolve } = require("path")
 
 describe("FundMeFactory", () => {
-    let FundMeFactory, Fund, deployer
+    let FundMeFactory, Fund, deployer, funder
     const sendValue = ethers.utils.parseEther("1")
     const fundFile = JSON.parse(
         fs.readFileSync("./artifacts/contracts/Fund.sol/Fund.json", "utf-8")
@@ -15,6 +15,7 @@ describe("FundMeFactory", () => {
     beforeEach(async () => {
         const accounts = await ethers.getSigners()
         deployer = accounts[0]
+        funder = accounts[1]
         await deployments.fixture(["all"])
         Fund = await ethers.getContract("Fund", deployer)
         FundMeFactory = await ethers.getContract("FundMeFactory", deployer)
@@ -31,9 +32,10 @@ describe("FundMeFactory", () => {
             expect(fundsIndexCounter.toNumber()).to.equal(0)
         })
 
-        it("should initialize i_minFundUSD to the correct value", async () => {
-            const i_minFundUSD = await FundMeFactory.i_minFundUSD()
-            expect(i_minFundUSD.toNumber()).to.equal(10)
+        it("should initialize i_minFundETH to the correct value", async () => {
+            const i_minFundETH = await FundMeFactory.i_minFundETH()
+            const minETH = ethers.utils.parseEther("0.1")
+            expect(i_minFundETH.toString()).to.equal(minETH)
         })
 
         it("should initialize i_owner to the msg.sender", async () => {
@@ -80,15 +82,21 @@ describe("FundMeFactory", () => {
     })
 
     describe("createFund()", function () {
+        const fundName = "Fund 1"
+        const fundDuration = 604800
+        const targetFunding = ethers.utils.parseEther("10")
+        beforeEach(async () => {
+            const accounts = await ethers.getSigners()
+            deployer = accounts[0]
+            await deployments.fixture(["all"])
+            Fund = await ethers.getContract("Fund", deployer)
+            FundMeFactory = await ethers.getContract("FundMeFactory", deployer)
+        })
         it("should create a new fund contract", async () => {
-            const fundName = "Fund 1"
-            const fundDuration = 100
-            const targetFunding = ethers.utils.parseEther("10")
             const hardhatProvider = ethers.getDefaultProvider(
                 "http://localhost:8545"
             )
             const initialFundsLength = (await FundMeFactory.getFunds()).length
-            let fundAddress
             const tx = await FundMeFactory.createFund(
                 fundName,
                 fundDuration,
@@ -97,7 +105,7 @@ describe("FundMeFactory", () => {
             expect(tx).to.emit("FundCreated")
             const result = await tx.wait()
             const newFund = new ethers.Contract(
-                result.events[0].address,
+                result.events[0].args.fundAddress,
                 fundABI,
                 hardhatProvider
             )
@@ -110,124 +118,127 @@ describe("FundMeFactory", () => {
                 fundDuration,
                 FundMeFactory.address
             )
-            deployer.sendTransaction({
-                to: signedNewFund.address,
-            })
             await init.wait()
-            console.log("works")
             const finalFundsLength = (await FundMeFactory.getFunds()).length
             expect(finalFundsLength).to.equal(initialFundsLength + 1)
-            console.log(
-                signedNewFund.address + " = " + result.events[0].address
-            )
-
-            const {
-                0: index,
-                1: name,
-                2: fundOwner,
-                3: currentFunding,
-                4: goalFunding,
-                5: startTime,
-                6: fundDur,
-            } = await signedNewFund.getFundData()
-
-            // expect(await signedNewFund.fundName()).to.equal(fundName)
+            expect(await signedNewFund.fundName()).to.equal(fundName)
         })
 
-        // it("should increment the fundsIndexCounter", async () => {
-        //     const fundName = "Fund 1"
-        //     const fundDuration = 100
-        //     const targetFunding = ethers.utils.parseEther("10")
-        //     const initialFundsIndexCounter =
-        //         await FundMeFactory.fundsIndexCounter()
-        //     await FundMeFactory.createFund(
-        //         fundName,
-        //         fundDuration,
-        //         targetFunding
-        //     )
-        //     const finalFundsIndexCounter =
-        //         await FundMeFactory.fundsIndexCounter()
-        //     expect(finalFundsIndexCounter.toNumber()).to.equal(
-        //         initialFundsIndexCounter.toNumber() + 1
-        //     )
-        // })
+        it("should increment the fundsIndexCounter", async () => {
+            const initialFundsIndexCounter =
+                await FundMeFactory.fundsIndexCounter()
+            await FundMeFactory.createFund(
+                fundName,
+                fundDuration,
+                targetFunding
+            )
+            const finalFundsIndexCounter =
+                await FundMeFactory.fundsIndexCounter()
+            expect(finalFundsIndexCounter.toNumber()).to.equal(
+                initialFundsIndexCounter.toNumber() + 1
+            )
+        })
 
-        // it("should set the correct values in the newly created fund contract", async () => {
-        //     const fundName = "Fund 1"
-        //     const fundDuration = 100
-        //     const targetFunding = ethers.utils.parseEther("10")
-        //     const fund = await FundMeFactory.createFund(
-        //         fundName,
-        //         fundDuration,
-        //         targetFunding
-        //     )
-        //     const newFund = await ethers.getContractAt("Fund", fund)
-        //     expect(await newFund.fundName()).to.equal(fundName)
-        //     expect(await newFund.fundDuration()).to.equal(fundDuration)
-        //     expect(await newFund.targetFunding()).to.equal(targetFunding)
-        //     expect(await newFund.factory()).to.equal(FundMeFactory.address)
-        // })
+        it("should set the correct values in the newly created fund contract", async () => {
+            const hardhatProvider = ethers.getDefaultProvider(
+                "http://localhost:8545"
+            )
+            const tx = await FundMeFactory.createFund(
+                fundName,
+                fundDuration,
+                targetFunding
+            )
+            expect(tx).to.emit("FundCreated")
+            const result = await tx.wait()
+            const newFund = new ethers.Contract(
+                result.events[0].args.fundAddress,
+                fundABI,
+                hardhatProvider
+            )
+            const signedNewFund = newFund.connect(deployer)
+            const init = await signedNewFund.initialize(
+                0,
+                fundName,
+                deployer.address,
+                targetFunding,
+                fundDuration,
+                FundMeFactory.address
+            )
+            await init.wait()
+            expect(await signedNewFund.fundName()).to.equal(fundName)
+            expect(await signedNewFund.fundDuration()).to.equal(fundDuration)
+            expect(await signedNewFund.targetFunding()).to.equal(targetFunding)
+            expect(await signedNewFund.fundManager()).to.equal(
+                FundMeFactory.address
+            )
+        })
 
-        // it("should only be callable by the owner", async () => {
-        //     const fundName = "Fund 1"
-        //     const fundDuration = 100
-        //     const targetFunding = ethers.utils.parseEther("10")
-        //     const nonOwner = await getNamedAccounts().other
-        //     const fundMeFactory = FundMeFactory.connect(nonOwner)
-        //     await expect(
-        //         fundMeFactory.createFund(fundName, fundDuration, targetFunding)
-        //     ).to.be.revertedWith("FundMe__NotOwner")
-        // })
+        it("should only be callable with targetFunding greater than or equal to i_minTargetFundingETH", async () => {
+            const targetFunding = ethers.utils.parseEther("0.05")
+            await expect(
+                FundMeFactory.createFund(fundName, fundDuration, targetFunding)
+            ).to.be.revertedWith("FundMe__LowTargetFunding")
+        })
 
-        // it("should only be callable with targetFunding greater than or equal to i_minFundUSD", async () => {
-        //     const fundName = "Fund 1"
-        //     const fundDuration = 100
-        //     const targetFunding = ethers.utils.parseEther("5")
-        //     await expect(
-        //         FundMeFactory.createFund(fundName, fundDuration, targetFunding)
-        //     ).to.be.revertedWith("FundMe__NotEnoughFunds")
-        // })
+        it("should only be callable with valid fundName", async () => {
+            const fundName = ""
+            const targetFunding = ethers.utils.parseEther("10")
+            await expect(
+                FundMeFactory.createFund(fundName, fundDuration, targetFunding)
+            ).to.be.revertedWith("FundMe__InvalidFundName")
+            const invalidFundName = "123456789012345678901234567890000"
+            await expect(
+                FundMeFactory.createFund(
+                    invalidFundName,
+                    fundDuration,
+                    targetFunding
+                )
+            ).to.be.revertedWith("FundMe__InvalidFundName")
+        })
 
-        // it("should only be callable with valid fundName", async () => {
-        //     const fundName = ""
-        //     const fundDuration = 100
-        //     const targetFunding = ethers.utils.parseEther("10")
-        //     await expect(
-        //         FundMeFactory.createFund(fundName, fundDuration, targetFunding)
-        //     ).to.be.revertedWith("FundMe__InvalidFundName")
-        // })
+        it("should only be callable with valid fundDuration", async () => {
+            const fundDuration = 0
+            const targetFunding = ethers.utils.parseEther("10")
+            await expect(
+                FundMeFactory.createFund(fundName, fundDuration, targetFunding)
+            ).to.be.revertedWith("FundMe__InvalidFundDuration")
+        })
+    })
 
-        // it("should only be callable with valid fundDuration", async () => {
-        //     const fundName = "Fund 1"
-        //     const fundDuration = 0
-        //     const targetFunding = ethers.utils.parseEther("10")
-        //     await expect(
-        //         FundMeFactory.createFund(fundName, fundDuration, targetFunding)
-        //     ).to.be.revertedWith("FundMe__InvalidFundDuration")
-        // })
+    describe("withdraw()", function () {
+        it("should only be callable by the owner", async () => {
+            const fundMeFactory = FundMeFactory.connect(funder)
+            await expect(fundMeFactory.withdraw()).to.be.revertedWith(
+                "FundMe__NotOwner"
+            )
+        })
 
-        // it("should only be callable with valid targetFunding", async () => {
-        //     const fundName = "Fund 1"
-        //     const fundDuration = 100
-        //     const targetFunding = ethers.utils.parseEther("0")
-        //     await expect(
-        //         FundMeFactory.createFund(fundName, fundDuration, targetFunding)
-        //     ).to.be.revertedWith("FundMe__InvalidFundTarget")
-        // })
+        it("should only be callable when the contract's balance is greater than 0", async () => {
+            await expect(FundMeFactory.withdraw()).to.be.revertedWith(
+                "FundMe__NotEnoughFunds"
+            )
+        })
 
-        // it("should add the new fund contract to the funds array", async () => {
-        //     const fundName = "Fund 1"
-        //     const fundDuration = 100
-        //     const targetFunding = ethers.utils.parseEther("10")
-        //     const initialFunds = await FundMeFactory.funds()
-        //     const fund = await FundMeFactory.createFund(
-        //         fundName,
-        //         fundDuration,
-        //         targetFunding
-        //     )
-        //     const finalFunds = await FundMeFactory.funds()
-        //     expect(finalFunds.length).to.equal(initialFunds.length + 1)
-        //     expect(finalFunds[finalFunds.length - 1]).to.equal(fund)
-        // })
+        it("should transfer the contract's balance to the owner's address", async () => {
+            const initialBalance = await ethers.provider.getBalance(deployer)
+            await FundMeFactory.connect(deployer).sendTransaction({
+                value: ethers.utils.parseEther("1"),
+            })
+            await FundMeFactory.withdraw()
+            const finalBalance = await ethers.provider.getBalance(deployer)
+            expect(finalBalance.sub(initialBalance)).to.equal(
+                ethers.utils.parseEther("1")
+            )
+        })
+
+        it("should revert when transfer fails", async () => {
+            await deployer.sendTransaction({
+                value: ethers.utils.parseEther("1"),
+                to: FundMeFactory.address,
+            })
+            await expect(
+                FundMeFactory.connect(deployer).withdraw({ gasLimit: 224065 })
+            ).to.be.revertedWith("FundMe__TransferFailed")
+        })
     })
 })
