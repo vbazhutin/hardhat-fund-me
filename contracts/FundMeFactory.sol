@@ -9,26 +9,33 @@ pragma solidity ^0.8.17;
 
 import "./Clones.sol";
 import "./Fund.sol";
+import "./StringUtils.sol";
 
 error FundMe__NotOwner();
 error FundMe__NotEnoughFunds();
 error FundMe__TransferFailed();
+error FundMe__LowTargetFunding();
+error FundMe__InvalidFundNameLength();
+error FundMe__InvalidFundDuration();
 
 contract FundMeFactory {
+    using StringUtils for string;
     uint256 public fundsIndexCounter;
-    uint256 public immutable i_minFundUSD;
+    uint256 public immutable i_minFundETH;
     address public immutable i_owner;
     address[] public funds;
     address public masterContract;
+    uint256 i_minTargetFundingETH;
 
     constructor(address _masterContract) {
         masterContract = _masterContract;
         fundsIndexCounter = 0;
-        i_minFundUSD = 10;
+        i_minFundETH = 0.1 ether;
+        i_minTargetFundingETH = 1 ether;
         i_owner = msg.sender;
     }
 
-    event FundCreated(uint256 index, address fundAddress);
+    event FundCreated(uint256 indexed index, address indexed fundAddress);
 
     receive() external payable {}
 
@@ -39,6 +46,15 @@ contract FundMeFactory {
         uint256 _fundDuration,
         uint256 _targetFunding
     ) external returns (address fund) {
+        if (_targetFunding < 1 ether) {
+            revert FundMe__LowTargetFunding();
+        }
+        if (_fundName.length() < 3 || _fundName.length() > 32) {
+            revert FundMe__InvalidFundNameLength();
+        }
+        if (_fundDuration < 7 days) {
+            revert FundMe__InvalidFundDuration();
+        }
         fund = Clones.clone(masterContract);
         Fund(fund).initialize(
             fundsIndexCounter,
