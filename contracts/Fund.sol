@@ -51,6 +51,10 @@ contract Fund {
         currentFunding += msg.value;
     }
 
+    function getFundName() public view returns (string memory) {
+        return fundName;
+    }
+
     function getFundData()
         public
         view
