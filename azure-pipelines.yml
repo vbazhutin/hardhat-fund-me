@@ -29,7 +29,7 @@ steps:
 - task: GitHubComment@0
   condition: and(eq(variables['Build.Reason'], 'PullRequest'), failed())
   inputs:
-    gitHubConnection: 'myGitHubConnection'
+    gitHubConnection: 'voyotex'
     repositoryName: '$(Build.Repository.Name)'
     comment: |
       **Linter Error Details:**
@@ -76,7 +76,7 @@ steps:
 - task: GitHubComment@0
   condition: and(eq(variables['Build.Reason'], 'PullRequest'), failed(), eq(variables.slitherAuditRun,'yes'))
   inputs:
-    gitHubConnection: 'myGitHubConnection'
+    gitHubConnection: 'voyotex'
     repositoryName: '$(Build.Repository.Name)'
     comment: |
       **Slither audit result:**
