@@ -29,8 +29,8 @@ steps:
 - task: GitHubComment@0
   condition: and(eq(variables['Build.Reason'], 'PullRequest'), failed())
   inputs:
-    gitHubConnection: 'voyotex'
-    repositoryName: '$(Build.Repository.Name)'
+    gitHubConnection: 'FundMeAzurePipe'
+    repositoryName: 'voyotex/fund-me-backend'
     comment: |
       **Linter Error Details:**
       ```
@@ -76,8 +76,8 @@ steps:
 - task: GitHubComment@0
   condition: and(eq(variables['Build.Reason'], 'PullRequest'), failed(), eq(variables.slitherAuditRun,'yes'))
   inputs:
-    gitHubConnection: 'voyotex'
-    repositoryName: '$(Build.Repository.Name)'
+    gitHubConnection: 'FundMeAzurePipe'
+    repositoryName: 'voyotex/fund-me-backend'
     comment: |
       **Slither audit result:**
       
