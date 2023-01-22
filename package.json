@@ -1,7 +1,15 @@
 {
-  "name": "fund-me",
+  "name": "fund-me-dapp",
   "author": "@voyotex",
   "version": "1.0.0",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/voyotex/fund-me-backend.git/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/voyotex/fund-me-backend.git"
+  },
   "devDependencies": {
     "@chainlink/contracts": "^0.4.1",
     "@nomiclabs/hardhat-ethers": "npm:hardhat-deploy-ethers@^0.3.0-beta.13",
@@ -20,8 +28,10 @@
     "solidity-coverage": "^0.7.16"
   },
   "scripts": {
-    "test": "yarn hardhat test",
-    "test-staging": "yarn hardhat test --network rinkeby",
-    "lint": "yarn solhint 'contracts'/*.sol"
+    "compile": "hardhat compile",
+    "coverage": "hardhat coverage",
+    "test": "hardhat test",
+    "test-staging": "hardhat test --network goerli",
+    "lint": "solhint --max-warnings 0 \"contracts/**/*.sol\""
   }
 }
