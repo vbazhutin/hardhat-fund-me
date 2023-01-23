@@ -90,4 +90,8 @@ contract FundMeFactory {
     function getFunds() public view returns (address[] memory) {
         return funds;
     }
+
+    function getCurrentFundCount() public view returns (uint256) {
+        return fundsIndexCounter;
+    }
 }
