@@ -26,15 +26,28 @@ jobs:
       
     
   analyze:
-      runs-on: ubuntu-latest
-      steps:
-        - uses: actions/checkout@v3
-        - uses: actions/setup-node@v3
-          with:
-            node-version: 18
-        - run: npm ci --legacy-peer-deps
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+    
+    - name: Checkout repository
+      uses: actions/checkout@v3
+    
+    - run: npm ci --legacy-peer-deps
 
-        - name: Run Slither
-          uses: crytic/slither-action@v0.2.0
-          with:
-            fail-on: none
+    - name: Run Slither
+      uses: crytic/slither-action@v0.2.0
+      id: slither
+      with:
+        install: false
+        node-version: 18
+        sarif: results.sarif
+        fail-on: none
+    - run: npm ci --legacy-peer-deps
+
+    - name: Upload SARIF file
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: ${{ steps.slither.outputs.sarif }}
