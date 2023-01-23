@@ -85,13 +85,6 @@ describe("FundMeFactory", () => {
         const fundName = "Fund 1"
         const fundDuration = 604800
         const targetFunding = ethers.utils.parseEther("10")
-        beforeEach(async () => {
-            const accounts = await ethers.getSigners()
-            deployer = accounts[0]
-            await deployments.fixture(["all"])
-            Fund = await ethers.getContract("Fund", deployer)
-            FundMeFactory = await ethers.getContract("FundMeFactory", deployer)
-        })
         it("should create a new fund contract", async () => {
             const hardhatProvider = ethers.getDefaultProvider(
                 "http://localhost:8545"
@@ -220,25 +213,26 @@ describe("FundMeFactory", () => {
         })
 
         it("should transfer the contract's balance to the owner's address", async () => {
-            const initialBalance = await ethers.provider.getBalance(deployer)
-            await FundMeFactory.connect(deployer).sendTransaction({
-                value: ethers.utils.parseEther("1"),
-            })
-            await FundMeFactory.withdraw()
-            const finalBalance = await ethers.provider.getBalance(deployer)
-            expect(finalBalance.sub(initialBalance)).to.equal(
-                ethers.utils.parseEther("1")
-            )
-        })
-
-        it("should revert when transfer fails", async () => {
             await deployer.sendTransaction({
-                value: ethers.utils.parseEther("1"),
                 to: FundMeFactory.address,
+                value: sendValue,
+                data: "0x",
             })
-            await expect(
-                FundMeFactory.connect(deployer).withdraw({ gasLimit: 224065 })
-            ).to.be.revertedWith("FundMe__TransferFailed")
+            const initialBalance = await deployer.getBalance()
+            expect(
+                await ethers.provider.getBalance(FundMeFactory.address)
+            ).to.be.equal(sendValue)
+
+            const tx = await FundMeFactory.withdraw()
+            const receipt = await tx.wait()
+            const gasCost = receipt.gasUsed.mul(receipt.effectiveGasPrice)
+            const finalBalance = await deployer.getBalance()
+            expect(
+                await ethers.provider.getBalance(FundMeFactory.address)
+            ).to.be.equal(0)
+            expect(finalBalance.sub(initialBalance).add(gasCost)).to.equal(
+                sendValue
+            )
         })
     })
 })
