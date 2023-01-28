@@ -16,7 +16,7 @@ steps:
   displayName: 'Install Node.js'
 
 - script: |
-    npm ci
+    npm ci --legacy-peer-deps
   displayName: 'Install dependencies'
 
 - script: |
@@ -52,8 +52,8 @@ steps:
 - script: |
     python -m pip install --upgrade pip
     pip3 install slither-analyzer solc-select
-    solc-select install 0.6.11
-    solc-select use 0.6.11
+    solc-select install 0.8.17
+    solc-select use 0.8.17
   displayName: 'Install security dependencies'
 
 - script: |
